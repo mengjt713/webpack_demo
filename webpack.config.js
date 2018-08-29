@@ -1,42 +1,74 @@
-/**
- * Created by mengjintao on 2018/1/13.
- */
-const path = require('path');
-
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CleanWebpackPlugin = require('clean-webpack-plugin');
-
-const webpack = require('webpack');
+//webpack.pro.js
+const webpack = require('webpack')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const ExtractTextPlugin = require('extract-text-webpack-plugin')
+const CleanWebpackPlugin = require('clean-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 module.exports = {
-    entry: {
-        app: './src/index.js'
-        /*print: './src/print.js'*/
+    entry: __dirname + '/public/scripts/index.js',
+    output: {
+        path: __dirname + '/build/static', // 打包后的文件存放的地方
+        filename: 'scripts/[name]-[hash:5].js' // 打包后输出文件的文件名,带有md5 hash戳
     },
-    devtool: 'inline-source-map',
-    devServer:{
-        contentBase:'./dist',
-        hot:true
+    resolve: {
+        extensions: ['.jsx', '.js']
     },
     module: {
-         rules: [
-               {
-                 test: /\.css$/,
-                 use: ['style-loader', 'css-loader']
-           }
-         ]
+        rules: [{
+            test: /(\.jsx|\.js)$/,
+            use: {
+                loader: 'babel-loader'
+            },
+            exclude: /node_modules/ // 不进行编译的目录
+        }, {
+            test: /\.css$/,
+            use: ExtractTextPlugin.extract({
+                fallback: 'style-loader',
+                use: {
+                    loader: 'css-loader',
+                    options: {
+                        minimize: true
+                    }
+                }
+            })
+        }]
     },
     plugins: [
-        new CleanWebpackPlugin(['dist']),
         new HtmlWebpackPlugin({
-            title: 'Output Management'
+            template: __dirname + '/views/index.html',
+            filename: '../index.html',
+            minify: {
+                removeComments: true,
+                collapseWhitespace: true,
+                removeRedundantAttributes: true,
+                useShortDoctype: true,
+                removeEmptyAttributes: true,
+                removeStyleLinkTypeAttributes: true,
+                keepClosingSlash: true,
+                minifyJS: true,
+                minifyCSS: true,
+                minifyURLs: true,
+            },
+            chunksSortMode: 'dependency'
         }),
-        new webpack.NamedModulesPlugin(),
-        new webpack.HotModuleReplacementPlugin()
-    ],
-    output: {
-        /*filename: 'bundle.js',*/
-        filename: '[name].bundle.js',
-        path: path.resolve(__dirname, 'dist'),
-        publicPath: '/'
-    }
-};
+        new ExtractTextPlugin('styles/style-[hash:5].css'),
+        new CleanWebpackPlugin('build/*', {
+            root: __dirname,
+            verbose: true,
+            dry: false
+        }),
+        new webpack.optimize.UglifyJsPlugin(),
+        new CopyWebpackPlugin([{
+            from: __dirname + '/public/images',
+            to: __dirname + '/build/static/images'
+        }, {
+            from: __dirname + '/public/scripts/vector.js',
+            to: __dirname + '/build/static/scripts/vector.js'
+        }]),
+        new webpack.optimize.ModuleConcatenationPlugin(),
+        new webpack.optimize.CommonsChunkPlugin({
+            name: 'vendor',
+            filename: 'scripts/common/vendor-[hash:5].js'
+        })
+    ]
+}
